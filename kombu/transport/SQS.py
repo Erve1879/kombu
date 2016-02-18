@@ -339,7 +339,7 @@ class Channel(virtual.Channel):
             message.delivery_info.pop(unwanted_key, None)
         return super(Channel, self)._restore(message)
 
-    def basic_ack(self, delivery_tag):
+    def basic_ack(self, delivery_tag, multiple=False):
         delivery_info = self.qos.get(delivery_tag).delivery_info
         try:
             queue = delivery_info['sqs_queue']
