@@ -6,7 +6,7 @@ kombu.mixins
 Useful mixin classes.
 
 """
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import socket
 
@@ -19,9 +19,10 @@ from .common import ignore_errors
 from .five import range
 from .messaging import Consumer, Producer
 from .log import get_logger
-from .utils import cached_property, nested
+from .utils.compat import nested
 from .utils.encoding import safe_repr
 from .utils.limits import TokenBucket
+from .utils.objects import cached_property
 
 __all__ = ['ConsumerMixin']
 
@@ -50,26 +51,24 @@ class ConsumerMixin(object):
     Supporting multiple consumers is important so that multiple
     channels can be used for different QoS requirements.
 
-    **Example**:
+    Example:
+        .. code-block:: python
 
-    .. code-block:: python
+            class Worker(ConsumerMixin):
+                task_queue = Queue('tasks', Exchange('tasks'), 'tasks'))
 
+                def __init__(self, connection):
+                    self.connection = None
 
-        class Worker(ConsumerMixin):
-            task_queue = Queue('tasks', Exchange('tasks'), 'tasks'))
+                def get_consumers(self, Consumer, channel):
+                    return [Consumer(queues=[self.task_queue],
+                                     callbacks=[self.on_task])]
 
-            def __init__(self, connection):
-                self.connection = None
+                def on_task(self, body, message):
+                    print('Got task: {0!r}'.format(body))
+                    message.ack()
 
-            def get_consumers(self, Consumer, channel):
-                return [Consumer(queues=[self.task_queue],
-                                 callback=[self.on_task])]
-
-            def on_task(self, body, message):
-                print('Got task: {0!r}'.format(body))
-                message.ack()
-
-    **Additional handler methods**:
+    Methods:
 
         * :meth:`extra_context`
 
@@ -243,9 +242,6 @@ class ConsumerMixin(object):
 
     @cached_property
     def restart_limit(self):
-        # the AttributeError that can be catched from amqplib
-        # poses problems for the too often restarts protection
-        # in Connection.ensure_connection
         return TokenBucket(1)
 
     @cached_property
@@ -262,28 +258,27 @@ class ConsumerProducerMixin(ConsumerMixin):
     publishing messages.
 
     Example:
+        .. code-block:: python
 
-    .. code-block:: python
+            class Worker(ConsumerProducerMixin):
 
-        class Worker(ConsumerProducerMixin):
+                def __init__(self, connection):
+                    self.connection = connection
 
-            def __init__(self, connection):
-                self.connection = connection
+                def get_consumers(self, Consumer, channel):
+                    return [Consumer(queues=Queue('foo'),
+                                     on_message=self.handle_message,
+                                     accept='application/json',
+                                     prefetch_count=10)]
 
-            def get_consumers(self, Consumer, channel):
-                return [Consumer(queues=Queue('foo'),
-                                 on_message=self.handle_message,
-                                 accept='application/json',
-                                 prefetch_count=10)]
-
-            def handle_message(self, message):
-                self.producer.publish(
-                    {'message': 'hello to you'},
-                    exchange='',
-                    routing_key=message.properties['reply_to'],
-                    correlation_id=message.properties['correlation_id'],
-                    retry=True,
-                )
+                def handle_message(self, message):
+                    self.producer.publish(
+                        {'message': 'hello to you'},
+                        exchange='',
+                        routing_key=message.properties['reply_to'],
+                        correlation_id=message.properties['correlation_id'],
+                        retry=True,
+                    )
     """
     _producer_connection = None
 

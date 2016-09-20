@@ -1,3 +1,7 @@
+===============================================
+ Simple Messaging API - ``kombu.simple``
+===============================================
+
 .. currentmodule:: kombu.simple
 
 .. automodule:: kombu.simple
@@ -24,7 +28,7 @@
 
         .. attribute:: no_ack
 
-            flag to enable/disable acknowledgements.
+            flag to enable/disable acknowledgments.
 
         .. attribute:: queue
 
@@ -65,7 +69,7 @@
 
         .. attribute:: no_ack
 
-            flag to enable/disable acknowledgements.
+            flag to enable/disable acknowledgments.
 
         .. attribute:: queue
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import absolute_import, unicode_literals
 
 from kombu import Connection, Queue
 from kombu.mixins import ConsumerProducerMixin
@@ -12,7 +13,7 @@ def fib(n):
     elif n == 1:
         return 1
     else:
-        return fib(n-1) + fib(n-2)
+        return fib(n - 1) + fib(n - 2)
 
 
 class Worker(ConsumerProducerMixin):
@@ -45,7 +46,7 @@ class Worker(ConsumerProducerMixin):
 
 def start_worker(broker_url):
     connection = Connection(broker_url)
-    print " [x] Awaiting RPC requests"
+    print(' [x] Awaiting RPC requests')
     worker = Worker(connection)
     worker.run()
 

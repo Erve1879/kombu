@@ -1,8 +1,4 @@
-"""
-kombu.transport.zookeeper
-=========================
-
-Zookeeper transport.
+"""Zookeeper transport.
 
 :copyright: (c) 2010 - 2013 by Mahendra M.
 :license: BSD, see LICENSE for more details.
@@ -10,7 +6,7 @@ Zookeeper transport.
 **Synopsis**
 
 Connects to a zookeeper node as <server>:<port>/<vhost>
-The <vhost> becomes the base for all the other znodes. So we can use
+The <vhost> becomes the base for all the other znodes.  So we can use
 it like a vhost.
 
 This uses the built-in kazoo recipe for queues
@@ -18,14 +14,14 @@ This uses the built-in kazoo recipe for queues
 **References**
 
 - https://zookeeper.apache.org/doc/trunk/recipes.html#sc_recipes_Queues
-- https://kazoo.readthedocs.org/en/latest/api/recipe/queue.html
+- https://kazoo.readthedocs.io/en/latest/api/recipe/queue.html
 
 **Limitations**
-This queue does not offer reliable consumption. An entry is removed from
-the queue prior to being processed. So if an error occurs, the consumer
+This queue does not offer reliable consumption.  An entry is removed from
+the queue prior to being processed.  So if an error occurs, the consumer
 has to re-queue the item or it will be lost.
 """
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import os
 import socket
@@ -164,7 +160,7 @@ class Channel(virtual.Channel):
         host_port = (conninfo.hostname, conninfo.port or DEFAULT_PORT)
         if host_port not in hosts:
             hosts.insert(0, host_port)
-        conn_str = ",".join(['%s:%s' % (h, p) for h, p in hosts])
+        conn_str = ','.join(['%s:%s' % (h, p) for h, p in hosts])
         conn = KazooClient(conn_str)
         conn.start()
         return conn

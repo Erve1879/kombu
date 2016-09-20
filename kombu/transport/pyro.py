@@ -1,18 +1,13 @@
-"""
-kombu.transport.pyro
-======================
-
-Pyro transport.
+"""Pyro transport.
 
 Requires the :mod:`Pyro4` library to be installed.
-
 """
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import sys
 
 from kombu.five import reraise
-from kombu.utils import cached_property
+from kombu.utils.objects import cached_property
 
 from . import virtual
 
@@ -54,7 +49,7 @@ class Channel(virtual.Channel):
     def _size(self, queue):
         return self.shared_queues._size(queue)
 
-    def _delete(self, queue, *args):
+    def _delete(self, queue, *args, **kwargs):
         self.shared_queues._delete(queue)
 
     def _purge(self, queue):

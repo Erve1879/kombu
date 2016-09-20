@@ -1,27 +1,29 @@
-"""
-kombu.exceptions
-================
+"""Exceptions."""
+from __future__ import absolute_import, unicode_literals
 
-Exceptions.
-
-"""
-from __future__ import absolute_import
-
-import socket
+from socket import timeout as TimeoutError
 
 from amqp import ChannelError, ConnectionError, ResourceError
 
-__all__ = ['NotBoundError', 'MessageStateError', 'TimeoutError',
-           'LimitExceeded', 'ConnectionLimitExceeded',
-           'ChannelLimitExceeded', 'ConnectionError', 'ChannelError',
-           'VersionMismatch', 'SerializerNotInstalled', 'ResourceError',
-           'SerializationError', 'EncodeError', 'DecodeError', 'HttpError']
+from kombu.five import python_2_unicode_compatible
 
-TimeoutError = socket.timeout
+__all__ = [
+    'KombuError', 'OperationalError',
+    'NotBoundError', 'MessageStateError', 'TimeoutError',
+    'LimitExceeded', 'ConnectionLimitExceeded',
+    'ChannelLimitExceeded', 'ConnectionError', 'ChannelError',
+    'VersionMismatch', 'SerializerNotInstalled', 'ResourceError',
+    'SerializationError', 'EncodeError', 'DecodeError', 'HttpError',
+]
 
 
 class KombuError(Exception):
     """Common subclass for all Kombu exceptions."""
+    pass
+
+
+class OperationalError(KombuError):
+    """Recoverable message transport connection error."""
     pass
 
 
@@ -83,6 +85,7 @@ class InconsistencyError(ConnectionError):
     pass
 
 
+@python_2_unicode_compatible
 class HttpError(Exception):
 
     def __init__(self, code, message=None, response=None):

@@ -1,86 +1,31 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import, unicode_literals
 
-import sys
-import os
+from sphinx_celery import conf
 
-# If your extensions are in another directory, add it here. If the directory
-# is relative to the documentation root, use os.path.abspath to make it
-# absolute, like shown here.
-sys.path.append(os.path.join(os.pardir, "tests"))
-import kombu  # noqa
-
-from django.conf import settings  # noqa
-if not settings.configured:
-    settings.configure()
-
-# General configuration
-# ---------------------
-
-extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.coverage',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.intersphinx',
-]
-
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ['.templates']
-
-# The suffix of source filenames.
-source_suffix = '.rst'
-
-# The master toctree document.
-master_doc = 'index'
-
-# General information about the project.
-project = 'Kombu'
-copyright = '2009-2016, Ask Solem'
-
-# The version info for the project you're documenting, acts as replacement for
-# |version| and |release|, also used in various other places throughout the
-# built documents.
-#
-# The short X.Y version.
-version = ".".join(map(str, kombu.VERSION[0:2]))
-# The full version, including alpha/beta/rc tags.
-release = kombu.__version__
-
-exclude_trees = ['.build']
-
-# If true, '()' will be appended to :func: etc. cross-reference text.
-add_function_parentheses = True
-
-# The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'colorful'
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['.static']
-
-html_use_smartypants = True
-
-# If false, no module index is generated.
-html_use_modindex = True
-
-# If false, no index is generated.
-html_use_index = True
-
-latex_documents = [
-    ('index', 'Kombu.tex', 'Kombu Documentation',
-     'Ask Solem', 'manual'),
-]
-
-html_theme = "celery"
-html_theme_path = ["_theme"]
-html_sidebars = {
-    'index': ['sidebarintro.html', 'sourcelink.html', 'searchbox.html'],
-    '**': ['sidebarlogo.html', 'localtoc.html', 'relations.html',
-           'sourcelink.html', 'searchbox.html'],
-}
-
-intersphinx_mapping = {
-    'python': ('http://docs.python.org/dev', None),
-    'amqp': ('http://amqp.readthedocs.org/en/latest', None),
-    'vine': ('http://vine.readthedocs.org/en/latest', None),
-}
+globals().update(conf.build_config(
+    'kombu', __file__,
+    project='Kombu',
+    version_dev='4.0',
+    version_stable='3.0',
+    canonical_url='http://docs.kombu.me',
+    webdomain='kombu.me',
+    github_project='celery/kombu',
+    author='Ask Solem & contributors',
+    author_name='Ask Solem',
+    copyright='2009-2016',
+    publisher='Celery Project',
+    html_logo='images/kombusmall.jpg',
+    html_favicon='images/favicon.ico',
+    html_prepend_sidebars=['sidebardonations.html'],
+    extra_extensions=['sphinx.ext.napoleon'],
+    apicheck_ignore_modules=[
+        'kombu.entity',
+        'kombu.messaging',
+        'kombu.async.aws.ext',
+        'kombu.async.aws.sqs.ext',
+        'kombu.transport.qpid_patches',
+        'kombu.utils',
+        'kombu.transport.virtual.base',
+    ],
+))

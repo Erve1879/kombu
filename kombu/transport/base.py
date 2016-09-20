@@ -1,11 +1,5 @@
-"""
-kombu.transport.base
-====================
-
-Base transport interface.
-
-"""
-from __future__ import absolute_import
+"""Base transport interface."""
+from __future__ import absolute_import, unicode_literals
 
 import errno
 import socket
@@ -14,7 +8,7 @@ from amqp.exceptions import RecoverableConnectionError
 
 from kombu.exceptions import ChannelError, ConnectionError
 from kombu.message import Message
-from kombu.utils import cached_property
+from kombu.utils.objects import cached_property
 
 __all__ = ['Message', 'StdChannel', 'Management', 'Transport']
 
@@ -107,7 +101,7 @@ class Transport(object):
     #: Redis (driver_type: 'redis'), etc...
     driver_type = 'N/A'
 
-    #: Name of driver library (e.g. 'py-amqp', 'redis', 'beanstalkc').
+    #: Name of driver library (e.g. 'py-amqp', 'redis').
     driver_name = 'N/A'
 
     __reader = None

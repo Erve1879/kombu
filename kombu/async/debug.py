@@ -1,8 +1,9 @@
-from __future__ import absolute_import
+"""Event-loop debugging tools."""
+from __future__ import absolute_import, unicode_literals
 
-from kombu.five import items
-from kombu.utils import reprcall
+from kombu.five import items, string_t
 from kombu.utils.eventio import READ, WRITE, ERR
+from kombu.utils.functional import reprcall
 
 
 def repr_flag(flag):
@@ -14,7 +15,7 @@ def repr_flag(flag):
 def _rcb(obj):
     if obj is None:
         return '<missing>'
-    if isinstance(obj, str):
+    if isinstance(obj, string_t):
         return obj
     if isinstance(obj, tuple):
         cb, args = obj

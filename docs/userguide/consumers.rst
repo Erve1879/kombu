@@ -10,7 +10,7 @@ Basics
 ======
 
 The :class:`Consumer` takes a connection (or channel) and a list of queues to
-consume from.  Several consumers can be mixed to consume from different
+consume from. Several consumers can be mixed to consume from different
 channels, as they all bind to the same connection, and ``drain_events`` will
 drain events from all channels on that connection.
 
@@ -18,7 +18,9 @@ drain events from all channels on that connection.
 
     Kombu since 3.0 will only accept json/binary or text messages by default,
     to allow deserialization of other formats you have to specify them
-    in the ``accept`` argument::
+    in the ``accept`` argument:
+
+    .. code-block:: python
 
         Consumer(conn, accept=['json', 'pickle', 'msgpack', 'yaml'])
 
@@ -35,7 +37,7 @@ Draining events from several consumers:
 
 .. code-block:: python
 
-    from kombu.utils import nested
+    from kombu.utils.compat import nested
 
     with connection.channel(), connection.channel() as (channel1, channel2):
         with nested(Consumer(channel1, queues1, accept=['json']),
@@ -60,7 +62,7 @@ Or using :class:`~kombu.mixins.ConsumerMixin`:
             ]
 
         def on_message(self, body, message):
-            print("RECEIVED MESSAGE: {0!r}".format(body))
+            print('RECEIVED MESSAGE: {0!r}'.format(body))
             message.ack()
 
     C(connection).run()

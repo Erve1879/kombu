@@ -5,10 +5,10 @@ import re
 import sys
 import codecs
 
-from distutils.command.install import INSTALL_SCHEMES
+import setuptools
+import setuptools.command.test
 
-extra = {}
-PY3 = sys.version_info[0] == 3
+from distutils.command.install import INSTALL_SCHEMES
 
 if sys.version_info < (2, 7):
     raise Exception('Kombu 4.0 requires Python 2.7 or higher.')
@@ -20,30 +20,18 @@ except ImportError:
 
 # -- Parse meta
 re_meta = re.compile(r'__(\w+?)__\s*=\s*(.*)')
-re_vers = re.compile(r'VERSION\s*=.*?\((.*?)\)')
 re_doc = re.compile(r'^"""(.+?)"""')
-
-
-def rq(s):
-    return s.strip("\"'")
 
 
 def add_default(m):
     attr_name, attr_value = m.groups()
-    return ((attr_name, rq(attr_value)),)
-
-
-def add_version(m):
-    v = list(map(rq, m.groups()[0].split(', ')))
-    return (('VERSION', '.'.join(v[0:3]) + ''.join(v[3:])),)
+    return ((attr_name, attr_value.strip("\"'")),)
 
 
 def add_doc(m):
     return (('doc', m.groups()[0]),)
 
-pats = {re_meta: add_default,
-        re_vers: add_version,
-        re_doc: add_doc}
+pats = {re_meta: add_default, re_doc: add_doc}
 here = os.path.abspath(os.path.dirname(__file__))
 meta_fh = open(os.path.join(here, 'kombu/__init__.py'))
 try:
@@ -59,7 +47,7 @@ finally:
     meta_fh.close()
 # --
 
-packages, data_files = [], []
+data_files = []
 root_dir = os.path.dirname(__file__)
 if root_dir != '':
     os.chdir(root_dir)
@@ -86,9 +74,7 @@ for dirpath, dirnames, filenames in os.walk(src_dir):
         if dirname.startswith('.'):
             del dirnames[i]
     for filename in filenames:
-        if filename.endswith('.py'):
-            packages.append('.'.join(fullsplit(dirpath)))
-        else:
+        if not filename.endswith('.py'):
             data_files.append(
                 [dirpath, [os.path.join(dirpath, f) for f in filenames]],
             )
@@ -115,47 +101,50 @@ def reqs(*f):
                 os.path.join(os.getcwd(), 'requirements', *f)).readlines()
         ) if r]
 
-install_requires = reqs('default.txt')
-
-# -*- Tests Requires -*-
-
 
 def extras(*p):
     return reqs('extras', *p)
 
-tests_require = reqs('test3.txt' if PY3 else 'test.txt')
 
-extras_require = extra['extras_require'] = {
-    'msgpack': extras('msgpack.txt'),
-    'yaml': extras('yaml.txt'),
-    'redis': extras('redis.txt'),
-    'mongodb': extras('mongodb.txt'),
-    'sqs': extras('sqs.txt'),
-    'couchdb': extras('couchdb.txt'),
-    'beanstalk': extras('beanstalk.txt'),
-    'zookeeper': extras('zookeeper.txt'),
-    'zeromq': extras('zeromq.txt'),
-    'sqlalchemy': extras('sqlalchemy.txt'),
-    'librabbitmq': extras('librabbitmq.txt'),
-    'pyro': extras('pyro.txt'),
-    'slmq': extras('slmq.txt'),
-    'qpid': extras('qpid.txt'),
-}
+class pytest(setuptools.command.test.test):
+    user_options = [('pytest-args=', 'a', 'Arguments to pass to py.test')]
+
+    def initialize_options(self):
+        setuptools.command.test.test.initialize_options(self)
+        self.pytest_args = []
+
+    def run_tests(self):
+        import pytest
+        sys.exit(pytest.main(self.pytest_args))
 
 setup(
     name='kombu',
-    version=meta['VERSION'],
+    packages=setuptools.find_packages(exclude=['t', 't.*']),
+    version=meta['version'],
     description=meta['doc'],
+    long_description=long_description,
     author=meta['author'],
     author_email=meta['contact'],
     url=meta['homepage'],
     platforms=['any'],
-    packages=packages,
     data_files=data_files,
     zip_safe=False,
-    test_suite='nose.collector',
-    install_requires=install_requires,
-    tests_require=tests_require,
+    cmdclass={'test': pytest},
+    install_requires=reqs('default.txt'),
+    tests_require=reqs('test.txt'),
+    extras_require={
+        'msgpack': extras('msgpack.txt'),
+        'yaml': extras('yaml.txt'),
+        'redis': extras('redis.txt'),
+        'mongodb': extras('mongodb.txt'),
+        'sqs': extras('sqs.txt'),
+        'zookeeper': extras('zookeeper.txt'),
+        'librabbitmq': extras('librabbitmq.txt'),
+        'pyro': extras('pyro.txt'),
+        'slmq': extras('slmq.txt'),
+        'qpid': extras('qpid.txt'),
+        'consul': extras('consul.txt'),
+    },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: BSD License',
@@ -163,7 +152,7 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: Implementation :: CPython',
@@ -175,5 +164,4 @@ setup(
         'Topic :: System :: Networking',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
-    long_description=long_description,
-    **extra)
+)

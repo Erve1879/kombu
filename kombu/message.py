@@ -1,31 +1,33 @@
-"""
-kombu.transport.message
-=======================
-
-Message class.
-
-"""
-from __future__ import absolute_import
+"""Message class."""
+from __future__ import absolute_import, unicode_literals
 
 import sys
 
 from .compression import decompress
 from .exceptions import MessageStateError
-from .five import reraise, text_t
+from .five import python_2_unicode_compatible, reraise, text_t
 from .serialization import loads
+from .utils.functional import dictfilter
 
-ACK_STATES = frozenset(['ACK', 'REJECTED', 'REQUEUED'])
+ACK_STATES = {'ACK', 'REJECTED', 'REQUEUED'}
+IS_PYPY = hasattr(sys, 'pypy_version_info')
 
 
+@python_2_unicode_compatible
 class Message(object):
     """Base class for received messages."""
-    __slots__ = ('_state', 'channel', 'delivery_tag',
-                 'content_type', 'content_encoding',
-                 'delivery_info', 'headers', 'properties',
-                 'body', '_decoded_cache', 'accept', '__dict__')
+
     MessageStateError = MessageStateError
 
     errors = None
+
+    if not IS_PYPY:  # pragma: no cover
+        __slots__ = (
+            '_state', 'channel', 'delivery_tag',
+            'content_type', 'content_encoding',
+            'delivery_info', 'headers', 'properties',
+            'body', '_decoded_cache', 'accept', '__dict__',
+        )
 
     def __init__(self, channel, body=None, delivery_tag=None,
                  content_type=None, content_encoding=None, delivery_info={},
@@ -67,11 +69,12 @@ class Message(object):
 
     def ack(self, multiple=False):
         """Acknowledge this message as being processed.,
+
         This will remove the message from the queue.
 
-        :raises MessageStateError: If the message has already been
-            acknowledged/requeued/rejected.
-
+        Raises:
+            MessageStateError: If the message has already been
+                acknowledged/requeued/rejected.
         """
         if self.channel.no_ack_consumers is not None:
             try:
@@ -107,9 +110,9 @@ class Message(object):
 
         The message will be discarded by the server.
 
-        :raises MessageStateError: If the message has already been
-            acknowledged/requeued/rejected.
-
+        Raises:
+            MessageStateError: If the message has already been
+                acknowledged/requeued/rejected.
         """
         if self.acknowledged:
             raise self.MessageStateError(
@@ -121,12 +124,13 @@ class Message(object):
     def requeue(self):
         """Reject this message and put it back on the queue.
 
-        You must not use this method as a means of selecting messages
-        to process.
+        Warning:
+            You must not use this method as a means of selecting messages
+            to process.
 
-        :raises MessageStateError: If the message has already been
-            acknowledged/requeued/rejected.
-
+        Raises:
+            MessageStateError: If the message has already been
+                acknowledged/requeued/rejected.
         """
         if self.acknowledged:
             raise self.MessageStateError(
@@ -139,9 +143,9 @@ class Message(object):
         """Deserialize the message body, returning the original
         python structure sent by the publisher.
 
-        Note: The return value is memoized, use `_decode` to force
-        re-evaluation.
-
+        Note:
+            The return value is memoized, use `_decode` to force
+            re-evaluation.
         """
         if not self._decoded_cache:
             self._decoded_cache = self._decode()
@@ -162,20 +166,19 @@ class Message(object):
         return self._decoded_cache if self._decoded_cache else self.decode()
 
     def __repr__(self):
-        details = {
-            'state': self._state,
-            'content_type': self.content_type,
-            'delivery_tag': self.delivery_tag,
-            'properties': {},
-        }
-        if self.body is not None:
-            details['body_length'] = len(self.body)
-        for k in ('correlation_id', 'type'):
-            if k in self.properties:
-                details['properties'][k] = self.properties[k]
-        if 'routing_key' in self.delivery_info:
-            details['delivery_info'] = {
-                'routing_key': self.delivery_info['routing_key'],
-            }
-        return "<%s object at 0x%x with details %s>" % (
-            self.__class__.__name__, id(self), details)
+        return '<{0} object at {1:#x} with details {2!r}>'.format(
+            type(self).__name__, id(self), dictfilter(
+                state=self._state,
+                content_type=self.content_type,
+                delivery_tag=self.delivery_tag,
+                body_length=len(self.body) if self.body is not None else None,
+                properties=dictfilter(
+                    correlation_id=self.properties.get('correlation_id'),
+                    type=self.properties.get('type'),
+                ),
+                delivery_info=dictfilter(
+                    exchange=self.delivery_info.get('exchange'),
+                    routing_key=self.delivery_info.get('routing_key'),
+                ),
+            ),
+        )

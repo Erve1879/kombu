@@ -1,13 +1,8 @@
-"""
-kombu.compat
-============
-
-Carrot compatible interface for :class:`Publisher` and :class:`Producer`.
+"""Carrot compatible interface
 
 See http://packages.python.org/pypi/carrot for documentation.
-
 """
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 from itertools import count
 

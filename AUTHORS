@@ -1,11 +1,12 @@
 =========
  AUTHORS
 =========
-:order: sorted
+:order: sorted (`.,$!sort -uf`)
 
 Adam Gaca <adam.gaca@oke.pl>
 Adam Nelson <adam@varud.com>
 Adam Wentz
+Alan Justino <alan.justino@yahoo.com.br>
 Alex Koshelev <daevaorn@gmail.com>
 Alexandre Bourget <alexandre.bourget@savoirfairelinux.com>
 Anastasis Andronidis <anastasis90@yahoo.gr>
@@ -38,9 +39,11 @@ David Ziegler <david.ziegler@gmail.com>
 Dhananjay Nene <dhananjay.nene@gmail.com>
 Dmitry Malinovsky <dmalinovsky@thumbtack.net>
 Dustin J. Mitchell <dustin@mozilla.com>
+Emmanuel Cazenave <contact@emcaz.fr>
 Ephemera <obliviscence+git@gmail.com>
 Eric Reynolds <ereynolds@opendns.com>
 Fabrice Rabaute <fabrice@expa.com>
+Federico Ficarelli <federico.ficarelli@gmail.com>
 Felix Schwarz <felix.schwarz@oss.schwarz.eu>
 Felix Yan <felixonmars@archlinux.org>
 Fernando Jorge Mota <f.j.mota13@gmail.com>
@@ -69,6 +72,7 @@ John Watson <john@disqus.com>
 Jonathan Halcrow <jonathan.halcrow@gmail.com>
 Joseph Crosland <jcrosland@flumotion.com>
 Joshua Harlow <harlowja@gmail.com>
+Juan Carlos Ferrer <juan.carlos@micronixsolutions.com>
 Kai Groner <kai@gronr.com>
 Keith Fitzgerald <ghostrocket@me.com>
 Kevin McCarthy <me@kevinmccarthy.org>
@@ -76,6 +80,7 @@ Kevin McDonald <k3vinmcdonald@gmail.com>
 Latitia M. Haskins <lhaskins@jetsonsys.com>
 Len Buckens <buckens.len@gmail.com>
 Lorenzo Mancini <lmancini@develer.com>
+Luyun Xie <2304310@qq.com>
 Mahendra M <Mahendra_M@infosys.com>
 Marcin Lulek (ergo) <info@webreactor.eu>
 Mark Lavin <mlavin@caktusgroup.com>
@@ -101,6 +106,7 @@ Rafael Duran Castaneda <rafadurancastaneda@gmail.com>
 Rafal Malinowski <malinowski@red-sky.pl>
 Ralf Nyren <ralf-github@nyren.net>
 Randy Barlow <rbarlow@redhat.com>
+Raphael Michel <mail@raphaelmichel.de>
 Rob Ottaway <robottaway@gmail.com>
 Roger Hu <rhu@hearsaycorp.com>
 Rumyana Neykova <rumi.neykova@gmail.com>
@@ -119,6 +125,7 @@ Steeve Morin <steeve.morin@gmail.com>
 Stefan Eletzhofer <se@nexiles.de>
 Stephan Jaekel <steph@rdev.info>
 Stephen Day <stevvooe@gmail.com>
+Stuart Axon <stuaxo2@yahoo.com>
 Tareque Hossain
 Thomas Johansson <prencher@prencher.dk>
 Tobias Schottdorf <tobias@goshippo.com>
@@ -130,5 +137,6 @@ Victor Garcia <victor@tuenti.com>
 Viet Hung Nguyen <hvnsweeting@gmail.com>
 Vince Gonzalez <vince.gonzalez@gmail.com>
 Vincent Driessen <vincent@datafox.nl>
+Wido den Hollander <wido@widodh.nl>
 Zach Smith <zmsmith27@gmail.com>
 Zhao Xiaohong <mrluanma@gmail.com>

@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
-
-try:  # pragma: no cover
-    from email import message_from_file
-    from email.mime.message import MIMEMessage
-except ImportError:  # Py2
-    from mimetools import Message as MIMEMessage   # noqa
-
-    def message_from_file(m):  # noqa
-        return m
+from __future__ import absolute_import, unicode_literals
 
 from io import BytesIO
+
+from vine import promise, transform
+
+from kombu.async.http import Headers, Request, get_client
+from kombu.five import items, python_2_unicode_compatible
+
+from .ext import (
+    boto, AWSAuthConnection, AWSQueryConnection, XmlHandler, ResultSet,
+)
 
 try:
     from urllib.parse import urlunsplit
@@ -18,20 +18,23 @@ except ImportError:
     from urlparse import urlunsplit  # noqa
 from xml.sax import parseString as sax_parse
 
-from vine import promise, transform
+try:  # pragma: no cover
+    from email import message_from_file
+    from email.mime.message import MIMEMessage
+except ImportError:  # pragma: no cover
+    from mimetools import Message as MIMEMessage   # noqa
 
-from kombu.async.http import Headers, Request, get_client
-from kombu.five import items
+    def message_from_file(m):  # noqa
+        return m
 
-from .ext import (
-    boto, AWSAuthConnection, AWSQueryConnection, XmlHandler, ResultSet,
-)
-
-__all__ = ['AsyncHTTPConnection', 'AsyncHTTPSConnection',
-           'AsyncHTTPResponse', 'AsyncConnection',
-           'AsyncAWSAuthConnection', 'AsyncAWSQueryConnection']
+__all__ = [
+    'AsyncHTTPConnection', 'AsyncHTTPSConnection',
+    'AsyncHTTPResponse', 'AsyncConnection',
+    'AsyncAWSAuthConnection', 'AsyncAWSQueryConnection',
+]
 
 
+@python_2_unicode_compatible
 class AsyncHTTPResponse(object):
 
     def __init__(self, response):
@@ -52,8 +55,8 @@ class AsyncHTTPResponse(object):
     def msg(self):
         if self._msg is None:
             self._msg = MIMEMessage(message_from_file(
-                BytesIO('\r\n'.join(
-                    '{0}: {1}'.format(*h) for h in self.getheaders())
+                BytesIO(b'\r\n'.join(
+                    b'{0}: {1}'.format(*h) for h in self.getheaders())
                 )
             ))
         return self._msg
@@ -72,6 +75,7 @@ class AsyncHTTPResponse(object):
         return repr(self.response)
 
 
+@python_2_unicode_compatible
 class AsyncHTTPConnection(object):
     Request = Request
     Response = AsyncHTTPResponse

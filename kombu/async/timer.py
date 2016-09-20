@@ -1,49 +1,48 @@
 # -*- coding: utf-8 -*-
-"""
-kombu.async.timer
-=================
-
-Timer scheduling Python callbacks.
-
-"""
-from __future__ import absolute_import
+"""Timer scheduling Python callbacks."""
+from __future__ import absolute_import, unicode_literals
 
 import heapq
 import sys
 
 from collections import namedtuple
 from datetime import datetime
-from functools import wraps
-from time import time
+from functools import total_ordering
 from weakref import proxy as weakrefproxy
 
-from kombu.five import monotonic
+from vine.utils import wraps
+
+from kombu.five import monotonic, python_2_unicode_compatible
 from kombu.log import get_logger
+from time import time as _time
 
 try:
     from pytz import utc
-except ImportError:
+except ImportError:  # pragma: no cover
     utc = None
+
+__all__ = ['Entry', 'Timer', 'to_timestamp']
+
+logger = get_logger(__name__)
 
 DEFAULT_MAX_INTERVAL = 2
 EPOCH = datetime.utcfromtimestamp(0).replace(tzinfo=utc)
 IS_PYPY = hasattr(sys, 'pypy_version_info')
 
-logger = get_logger(__name__)
-
-__all__ = ['Entry', 'Timer', 'to_timestamp']
-
 scheduled = namedtuple('scheduled', ('eta', 'priority', 'entry'))
 
 
-def to_timestamp(d, default_timezone=utc):
+def to_timestamp(d, default_timezone=utc, time=monotonic):
     if isinstance(d, datetime):
         if d.tzinfo is None:
             d = d.replace(tzinfo=default_timezone)
-        return max((d - EPOCH).total_seconds(), 0)
+        diff = _time() - time()
+        return max((d - EPOCH).total_seconds() - diff, 0)
     return d
 
 
+@total_ordering
+@python_2_unicode_compatible
 class Entry(object):
     if not IS_PYPY:  # pragma: no cover
         __slots__ = (
@@ -72,27 +71,9 @@ class Entry(object):
         return '<TimerEntry: {0}(*{1!r}, **{2!r})'.format(
             self.fun.__name__, self.args, self.kwargs)
 
-    def __hash__(self):
-        return hash((self.fun, repr(self.args), repr(self.kwargs)))
-
     # must not use hash() to order entries
     def __lt__(self, other):
         return id(self) < id(other)
-
-    def __gt__(self, other):
-        return id(self) > id(other)
-
-    def __le__(self, other):
-        return id(self) <= id(other)
-
-    def __ge__(self, other):
-        return id(self) >= id(other)
-
-    def __eq__(self, other):
-        return hash(self) == hash(other)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
     @property
     def cancelled(self):
@@ -147,13 +128,13 @@ class Timer(object):
         tref._last_run = None
         return self.enter_after(secs, tref, priority)
 
-    def enter_at(self, entry, eta=None, priority=0, time=time):
+    def enter_at(self, entry, eta=None, priority=0, time=monotonic):
         """Enter function into the scheduler.
 
-        :param entry: Item to enter.
-        :keyword eta: Scheduled time as a :class:`datetime.datetime` object.
-        :keyword priority: Unused.
-
+        Arguments:
+            entry (~kombu.async.timer.Entry): Item to enter.
+            eta (datetime.datetime): Scheduled time.
+            priority (int): Unused.
         """
         if eta is None:
             eta = time()
@@ -166,7 +147,7 @@ class Timer(object):
                 return
         return self._enter(eta, priority, entry)
 
-    def enter_after(self, secs, entry, priority=0, time=time):
+    def enter_after(self, secs, entry, priority=0, time=monotonic):
         return self.enter_at(entry, time() + secs, priority)
 
     def _enter(self, eta, priority, entry, push=heapq.heappush):
@@ -188,7 +169,7 @@ class Timer(object):
     def stop(self):
         pass
 
-    def __iter__(self, min=min, nowfun=time,
+    def __iter__(self, min=min, nowfun=monotonic,
                  pop=heapq.heappop, push=heapq.heappush):
         """This iterator yields a tuple of ``(entry, wait_seconds)``,
         where if entry is :const:`None` the caller should wait

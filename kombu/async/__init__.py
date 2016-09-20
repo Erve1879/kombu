@@ -1,12 +1,6 @@
 # -*- coding: utf-8 -*-
-"""
-kombu.async
-===========
-
-Event loop implementation.
-
-"""
-from __future__ import absolute_import
+"""Event loop."""
+from __future__ import absolute_import, unicode_literals
 
 from .hub import Hub, get_event_loop, set_event_loop
 

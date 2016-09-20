@@ -1,11 +1,5 @@
-"""
-kombu.transport.redis
-=====================
-
-Redis transport.
-
-"""
-from __future__ import absolute_import
+"""Redis transport."""
+from __future__ import absolute_import, unicode_literals
 
 import numbers
 import socket
@@ -20,12 +14,14 @@ from vine import promise
 from kombu.exceptions import InconsistencyError, VersionMismatch
 from kombu.five import Empty, values, string_t
 from kombu.log import get_logger
-from kombu.utils import cached_property, register_after_fork, uuid
+from kombu.utils.compat import register_after_fork
 from kombu.utils.eventio import poll, READ, ERR
 from kombu.utils.encoding import bytes_to_str
 from kombu.utils.json import loads, dumps
+from kombu.utils.objects import cached_property
 from kombu.utils.scheduling import cycle_by_name
 from kombu.utils.url import _parse_url
+from kombu.utils.uuid import uuid
 
 from . import virtual
 
@@ -329,7 +325,7 @@ class MultiChannelPoller(object):
     def on_readable(self, fileno):
         chan, type = self._fd_to_chan[fileno]
         if chan.qos.can_consume():
-            return chan.handlers[type]()
+            chan.handlers[type]()
 
     def handle_event(self, fileno, event):
         if event & READ:
@@ -338,7 +334,7 @@ class MultiChannelPoller(object):
             chan, type = self._fd_to_chan[fileno]
             chan._poll_error(type)
 
-    def get(self, timeout=None):
+    def get(self, callback, timeout=None):
         self._in_protected_read = True
         try:
             for channel in self._channels:
@@ -349,15 +345,14 @@ class MultiChannelPoller(object):
                     self._register_LISTEN(channel)
 
             events = self.poller.poll(timeout)
-            for fileno, event in events or []:
-                ret = self.handle_event(fileno, event)
-                if ret:
-                    return ret
-
+            if events:
+                for fileno, event in events:
+                    ret = self.handle_event(fileno, event)
+                    if ret:
+                        return
             # - no new data, so try to restore messages.
             # - reset active redis commands.
             self.maybe_restore_messages()
-
             raise Empty()
         finally:
             self._in_protected_read = False
@@ -421,23 +416,23 @@ class Channel(virtual.Channel):
     #: Can be either string alias, or a cycle strategy class
     #:
     #: - ``round_robin``
-    #:  :class:`~kombu.utils.scheduling.round_robin_cycle``
+    #:   (:class:`~kombu.utils.scheduling.round_robin_cycle`).
     #:
-    #:  Make sure each queue has an equal opportunity to be consumed from.
+    #:    Make sure each queue has an equal opportunity to be consumed from.
     #:
     #: - ``sorted``
-    #:    :class:`~kombu.utils.scheduling.sorted_cycle`.
+    #:   (:class:`~kombu.utils.scheduling.sorted_cycle`).
     #:
     #:    Consume from queues in alphabetical order.
     #:    If the first queue in the sorted list always contains messages,
     #:    then the rest of the queues will never be consumed from.
     #:
     #: - ``priority``
-    #:  :class:`~kombu.utils.scheduling.priority_cycle`.
+    #:   (:class:`~kombu.utils.scheduling.priority_cycle`).
     #:
-    #:  Consume from queues in original order, so that if the first
-    #:  queue always contains messages, the rest of the queues
-    #:  in the list will never be consumed from.
+    #:    Consume from queues in original order, so that if the first
+    #:    queue always contains messages, the rest of the queues
+    #:    in the list will never be consumed from.
     #:
     #: The default is to consume from queues in round robin.
     queue_order_strategy = 'round_robin'
@@ -492,7 +487,7 @@ class Channel(virtual.Channel):
 
         # Evaluate connection.
         try:
-            self.client.info()
+            self.client.ping()
         except Exception:
             self._disconnect_pools()
             raise
@@ -649,15 +644,31 @@ class Channel(virtual.Channel):
     def _handle_message(self, client, r):
         if bytes_to_str(r[0]) == 'unsubscribe' and r[2] == 0:
             client.subscribed = False
-        elif bytes_to_str(r[0]) == 'pmessage':
-            return {'type':    r[0], 'pattern': r[1],
-                    'channel': r[2], 'data':    r[3]}
+            return
+
+        if bytes_to_str(r[0]) == 'pmessage':
+            type, pattern, channel, data = r[0], r[1], r[2], r[3]
         else:
-            return {'type':    r[0], 'pattern': None,
-                    'channel': r[1], 'data':    r[2]}
+            type, pattern, channel, data = r[0], None, r[1], r[2]
+        return {
+            'type': type,
+            'pattern': pattern,
+            'channel': channel,
+            'data': data,
+        }
 
     def _receive(self):
         c = self.subclient
+        ret = []
+        try:
+            ret.append(self._receive_one(c))
+        except Empty:
+            pass
+        while c.connection.can_read(timeout=0):
+            ret.append(self._receive_one(c))
+        return any(ret)
+
+    def _receive_one(self, c):
         response = None
         try:
             response = c.parse_response()
@@ -678,8 +689,9 @@ class Channel(virtual.Channel):
                              channel, repr(payload)[:4096], exc_info=1)
                         raise Empty()
                     exchange = channel.split('/', 1)[0]
-                    return message, self._fanout_to_queue[exchange]
-        raise Empty()
+                    self.connection._deliver(
+                        message, self._fanout_to_queue[exchange])
+                    return True
 
     def _brpop_start(self, timeout=1):
         queues = self._queue_cycle.consume(len(self.active_queues))
@@ -705,7 +717,8 @@ class Channel(virtual.Channel):
                 dest, item = dest__item
                 dest = bytes_to_str(dest).rsplit(self.sep, 1)[0]
                 self._queue_cycle.rotate(dest)
-                return loads(bytes_to_str(item)), dest
+                self.connection._deliver(loads(bytes_to_str(item)), dest)
+                return True
             else:
                 raise Empty()
         finally:
@@ -773,9 +786,9 @@ class Channel(virtual.Channel):
                                        pattern or '',
                                        queue or '']))
 
-    def _delete(self, queue, exchange, routing_key, pattern, *args):
+    def _delete(self, queue, exchange, routing_key, pattern, *args, **kwargs):
         self.auto_delete_queues.discard(queue)
-        with self.conn_or_acquire() as client:
+        with self.conn_or_acquire(client=kwargs.get('client')) as client:
             client.srem(self.keyprefix_queue % (exchange,),
                         self.sep.join([routing_key or '',
                                        pattern or '',
@@ -811,18 +824,18 @@ class Channel(virtual.Channel):
 
     def close(self):
         self._closing = True
-        self._disconnect_pools()
         if not self.closed:
             # remove from channel poller.
             self.connection.cycle.discard(self)
 
             # delete fanout bindings
-            for queue in self._fanout_queues:
-                if queue in self.auto_delete_queues:
-                    self.queue_delete(queue)
-
+            client = self.__dict__.get('client')  # only if property cached
+            if client is not None:
+                for queue in self._fanout_queues:
+                    if queue in self.auto_delete_queues:
+                        self.queue_delete(queue, client=client)
+            self._disconnect_pools()
             self._close_clients()
-
         super(Channel, self).close()
 
     def _close_clients(self):
@@ -848,6 +861,10 @@ class Channel(virtual.Channel):
                     ))
         return vhost
 
+    def _filter_tcp_connparams(self, socket_keepalive=None,
+                               socket_keepalive_options=None, **params):
+        return params
+
     def _connparams(self, async=False):
         conninfo = self.connection.client
         connparams = {
@@ -872,9 +889,15 @@ class Channel(virtual.Channel):
         if '://' in host:
             scheme, _, _, _, _, path, query = _parse_url(host)
             if scheme == 'socket':
+                connparams = self._filter_tcp_connparams(**connparams)
                 connparams.update({
                     'connection_class': redis.UnixDomainSocketConnection,
                     'path': '/' + path}, **query)
+
+                connparams.pop('socket_connect_timeout', None)
+                connparams.pop('socket_keepalive', None)
+                connparams.pop('socket_keepalive_options', None)
+
             connparams.pop('host', None)
             connparams.pop('port', None)
         connparams['db'] = self._prepare_virtual_host(
@@ -884,7 +907,7 @@ class Channel(virtual.Channel):
         connection_cls = (
             connparams.get('connection_class') or
             self.connection_class
-            )
+        )
 
         if async:
             class Connection(connection_cls):
@@ -1021,9 +1044,7 @@ class Transport(virtual.Transport):
 
     def on_readable(self, fileno):
         """Handle AIO event for one of our file descriptors."""
-        item = self.cycle.on_readable(fileno)
-        if item:
-            self._deliver(*item)
+        self.cycle.on_readable(fileno)
 
     def _get_errors(self):
         """Utility to import redis-py's exceptions at runtime."""
@@ -1037,7 +1058,7 @@ class SentinelChannel(Channel):
 
     sentinel://0.0.0.0:26379;sentinel://0.0.0.0:26380/...
 
-    where each sentinel is separated by a `;`. Multiple sentinels are handled
+    where each sentinel is separated by a `;`.  Multiple sentinels are handled
     by :class:`kombu.Connection` constructor, and placed in the alternative
     list of servers to connect to in case of connection failure.
 
@@ -1061,15 +1082,14 @@ class SentinelChannel(Channel):
 
         additional_params = connparams.copy()
 
-        del additional_params['host']
-        del additional_params['port']
+        additional_params.pop('host', None)
+        additional_params.pop('port', None)
 
         sentinel_inst = sentinel.Sentinel(
             [(connparams['host'], connparams['port'])],
             min_other_sentinels=getattr(self, 'min_other_sentinels', 0),
             sentinel_kwargs=getattr(self, 'sentinel_kwargs', {}),
-            **additional_params
-        )
+            **additional_params)
 
         master_name = getattr(self, 'master_name', None)
 

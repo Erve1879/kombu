@@ -1,14 +1,9 @@
-"""
-kombu.transport.mongodb
-=======================
-
-MongoDB transport.
+"""MongoDB transport.
 
 :copyright: (c) 2010 - 2013 by Flavio Percoco Premoli.
 :license: BSD, see LICENSE for more details.
-
 """
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import datetime
 
@@ -22,7 +17,7 @@ from kombu.five import Empty
 from kombu.syn import _detect_environment
 from kombu.utils.encoding import bytes_to_str
 from kombu.utils.json import loads, dumps
-from kombu.utils import cached_property
+from kombu.utils.objects import cached_property
 
 from . import virtual
 
@@ -67,7 +62,7 @@ class BroadcastCursor(object):
             except pymongo.errors.OperationFailure as exc:
                 # In some cases tailed cursor can become invalid
                 # and have to be reinitalized
-                if 'not valid at server' in exc.message:
+                if 'not valid at server' in str(exc):
                     self.purge()
 
                     continue

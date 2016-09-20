@@ -1,76 +1,146 @@
+PROJ=kombu
+PGPIDENT="Celery Security Team"
 PYTHON=python
-SPHINX_DIR="docs/"
-SPHINX_BUILDDIR="${SPHINX_DIR}/.build"
-README="README.rst"
+PYTEST=py.test
+GIT=git
+TOX=tox
+ICONV=iconv
+FLAKE8=flake8
+FLAKEPLUS=flakeplus
+SPHINX2RST=sphinx2rst
+
+TESTDIR=t
+SPHINX_DIR=docs/
+SPHINX_BUILDDIR="${SPHINX_DIR}/_build"
+README=README.rst
 README_SRC="docs/templates/readme.txt"
+CONTRIBUTING=CONTRIBUTING.rst
 CONTRIBUTING_SRC="docs/contributing.rst"
-SPHINX2RST="extra/release/sphinx-to-rst.py"
+SPHINX_HTMLDIR="${SPHINX_BUILDDIR}/html"
+DOCUMENTATION=Documentation
+FLAKEPLUSTARGET=2.7
 
-SPHINX_HTMLDIR = "${SPHINX_BUILDDIR}/html"
+all: help
 
-html:
-	(cd "$(SPHINX_DIR)"; make html)
-	mv "$(SPHINX_HTMLDIR)" Documentation
+help:
+	@echo "docs                 - Build documentation."
+	@echo "test-all             - Run tests for all supported python versions."
+	@echo "distcheck ---------- - Check distribution for problems."
+	@echo "  test               - Run unittests using current python."
+	@echo "  lint ------------  - Check codebase for problems."
+	@echo "    apicheck         - Check API reference coverage."
+	@echo "    configcheck      - Check configuration reference coverage."
+	@echo "    readmecheck      - Check README.rst encoding."
+	@echo "    contribcheck     - Check CONTRIBUTING.rst encoding"
+	@echo "    flakes --------  - Check code for syntax and style errors."
+	@echo "      flakecheck     - Run flake8 on the source code."
+	@echo "      flakepluscheck - Run flakeplus on the source code."
+	@echo "readme               - Regenerate README.rst file."
+	@echo "contrib              - Regenerate CONTRIBUTING.rst file"
+	@echo "clean-dist --------- - Clean all distribution build artifacts."
+	@echo "  clean-git-force    - Remove all uncomitted files."
+	@echo "  clean ------------ - Non-destructive clean"
+	@echo "    clean-pyc        - Remove .pyc/__pycache__ files"
+	@echo "    clean-docs       - Remove documentation build artifacts."
+	@echo "    clean-build      - Remove setup artifacts."
+	@echo "bump                 - Bump patch version number."
+	@echo "bump-minor           - Bump minor version number."
+	@echo "bump-major           - Bump major version number."
+	@echo "release              - Make PyPI release."
 
-docsclean:
+clean: clean-docs clean-pyc clean-build
+
+clean-dist: clean clean-git-force
+
+bump:
+	bumpversion patch
+
+bump-minor:
+	bumpversion minor
+
+bump-major:
+	bumpversion major
+
+release:
+	python setup.py register sdist bdist_wheel upload --sign --identity="$(PGPIDENT)"
+
+Documentation:
+	(cd "$(SPHINX_DIR)"; $(MAKE) html)
+	mv "$(SPHINX_HTMLDIR)" $(DOCUMENTATION)
+
+docs: Documentation
+
+clean-docs:
 	-rm -rf "$(SPHINX_BUILDDIR)"
 
-htmlclean:
-	(cd "$(SPHINX_DIR)"; make clean)
+lint: flakecheck apicheck configcheck readmecheck
 
 apicheck:
-	extra/release/doc4allmods kombu
-
-indexcheck:
-	extra/release/verify-reference-index.sh
+	(cd "$(SPHINX_DIR)"; $(MAKE) apicheck)
 
 configcheck:
-	PYTHONPATH=. $(PYTHON) extra/release/verify_config_reference.py $(CONFIGREF_SRC)
+	(cd "$(SPHINX_DIR)"; $(MAKE) configcheck)
 
 flakecheck:
-	flake8 kombu
+	$(FLAKE8) --ignore=X999 "$(PROJ)" "$(TESTDIR)"
 
 flakediag:
 	-$(MAKE) flakecheck
 
 flakepluscheck:
-	flakeplus kombu --2.6
+	$(FLAKEPLUS) --$(FLAKEPLUSTARGET) "$(PROJ)" "$(TESTDIR)"
 
 flakeplusdiag:
 	-$(MAKE) flakepluscheck
 
 flakes: flakediag flakeplusdiag
 
-readmeclean:
+clean-readme:
 	-rm -f $(README)
 
 readmecheck:
-	iconv -f ascii -t ascii $(README) >/dev/null
+	$(ICONV) -f ascii -t ascii $(README) >/dev/null
 
 $(README):
-	$(PYTHON) $(SPHINX2RST) $(README_SRC) --ascii > $@
+	$(SPHINX2RST) "$(README_SRC)" --ascii > $@
 
-readme: readmeclean $(README) readmecheck
+readme: clean-readme $(README) readmecheck
 
-test:
-	nosetests -xv kombu.tests
+clean-contrib:
+	-rm -f "$(CONTRIBUTING)"
 
-cov:
-	nosetests -xv kombu.tests --with-coverage --cover-html --cover-branch
+$(CONTRIBUTING):
+	$(SPHINX2RST) "$(CONTRIBUTING_SRC)" > $@
 
-removepyc:
+contrib: clean-contrib $(CONTRIBUTING)
+
+clean-pyc:
 	-find . -type f -a \( -name "*.pyc" -o -name "*$$py.class" \) | xargs rm
 	-find . -type d -name "__pycache__" | xargs rm -r
 
-gitclean:
-	git clean -xdn
+removepyc: clean-pyc
 
-gitcleanforce:
-	git clean -xdf
+clean-build:
+	rm -rf build/ dist/ .eggs/ *.egg-info/ .tox/ .coverage cover/
 
-bump_version:
-	$(PYTHON) extra/release/bump_version.py kombu/__init__.py README.rst
+clean-git:
+	$(GIT) clean -xdn
 
-distcheck: flakecheck apicheck indexcheck configcheck readmecheck test gitclean
+clean-git-force:
+	$(GIT) clean -xdf
 
-dist: readme docsclean gitcleanforce removepyc
+test-all: clean-pyc
+	$(TOX)
+
+test:
+	$(PYTHON) setup.py test
+
+cov:
+	$(PYTEST) -x --cov=kombu --cov-report=html
+
+build:
+	$(PYTHON) setup.py sdist bdist_wheel
+
+distcheck: lint test clean
+
+dist: readme contrib clean-dist build

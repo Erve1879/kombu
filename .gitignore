@@ -5,12 +5,12 @@
 *.sqlite
 *.sqlite-journal
 settings_local.py
-.build
-build
-.*.sw[pon]
+build/
+.build/
+_build/
+.*.sw*
 dist/
 *.egg-info
-doc/__build/*
 pip-log.txt
 devdatabase.db
 ^parts
@@ -25,3 +25,8 @@ kombu/tests/cover
 kombu/tests/coverage.xml
 .coverage
 dump.rdb
+.idea/
+.cache/
+htmlcov/
+test.db
+coverage.xml

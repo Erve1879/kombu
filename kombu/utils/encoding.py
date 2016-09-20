@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
-"""
-kombu.utils.encoding
-~~~~~~~~~~~~~~~~~~~~~
+"""Text encoding utilities.
 
 Utilities to encode text, and to safely emit text from running
-applications without crashing with the infamous :exc:`UnicodeDecodeError`
-exception.
-
+applications without crashing from the infamous
+:exc:`UnicodeDecodeError` exception.
 """
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import sys
 import traceback
@@ -100,7 +97,7 @@ def safe_str(s, errors='replace'):
     return _safe_str(s, errors)
 
 
-if is_py3k:
+if is_py3k:  # pragma: no cover
 
     def _safe_str(s, errors='replace', file=None):
         if isinstance(s, str):

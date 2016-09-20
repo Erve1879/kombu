@@ -1,11 +1,8 @@
-"""
-kombu.transport.filesystem
-==========================
+"""File-system Transport
 
-Transport using the file system as the message store.
-
+Transport using the file-system as the message store.
 """
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import os
 import shutil
@@ -15,9 +12,9 @@ import tempfile
 from . import virtual
 from kombu.exceptions import ChannelError
 from kombu.five import Empty, monotonic
-from kombu.utils import cached_property
 from kombu.utils.encoding import bytes_to_str, str_to_bytes
 from kombu.utils.json import loads, dumps
+from kombu.utils.objects import cached_property
 
 
 VERSION = (1, 0, 0)

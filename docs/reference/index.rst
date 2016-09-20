@@ -22,46 +22,53 @@
     kombu.compression
     kombu.pools
     kombu.abstract
+    kombu.resource
     kombu.syn
     kombu.async
     kombu.async.hub
     kombu.async.semaphore
     kombu.async.timer
     kombu.async.debug
+    kombu.async.http
+    kombu.async.http.base
+    kombu.async.http.curl
+    kombu.async.aws
+    kombu.async.aws.connection
+    kombu.async.aws.sqs
+    kombu.async.aws.sqs.connection
+    kombu.async.aws.sqs.message
+    kombu.async.aws.sqs.queue
     kombu.transport
     kombu.transport.pyamqp
     kombu.transport.librabbitmq
     kombu.transport.qpid
     kombu.transport.memory
     kombu.transport.redis
-    kombu.transport.zmq
-    kombu.transport.beanstalk
     kombu.transport.mongodb
-    kombu.transport.couchdb
+    kombu.transport.consul
     kombu.transport.zookeeper
     kombu.transport.filesystem
-    kombu.transport.django
-    kombu.transport.django.models
-    kombu.transport.django.managers
-    kombu.transport.django.management.commands.clean_kombu_messages
-    kombu.transport.sqlalchemy
-    kombu.transport.sqlalchemy.models
     kombu.transport.SQS
     kombu.transport.SLMQ
     kombu.transport.pyro
-    kombu.transport.amqplib
     kombu.transport.base
     kombu.transport.virtual
     kombu.transport.virtual.exchange
-    kombu.transport.virtual.scheduling
     kombu.serialization
-    kombu.utils
-    kombu.utils.eventio
-    kombu.utils.limits
-    kombu.utils.debug
-    kombu.utils.encoding
-    kombu.utils.functional
-    kombu.utils.url
-    kombu.utils.text
     kombu.utils.amq_manager
+    kombu.utils.collections
+    kombu.utils.compat
+    kombu.utils.debug
+    kombu.utils.div
+    kombu.utils.encoding
+    kombu.utils.eventio
+    kombu.utils.functional
+    kombu.utils.imports
+    kombu.utils.json
+    kombu.utils.limits
+    kombu.utils.objects
+    kombu.utils.scheduling
+    kombu.utils.text
+    kombu.utils.url
+    kombu.utils.uuid
     kombu.five

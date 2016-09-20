@@ -1,14 +1,8 @@
 # -*- coding: utf-8 -*-
-"""
-    kombu.five
-    ~~~~~~~~~~~
+"""Python 2/3 Compatibility."""
+from __future__ import absolute_import, unicode_literals
 
-    Compatibility implementations of features
-    only available in newer Python versions.
+import sys
+import vine.five
 
-
-"""
-from __future__ import absolute_import
-
-from amqp.five import *        # noqa
-from amqp.five import __all__  # noqa
+sys.modules[__name__] = vine.five

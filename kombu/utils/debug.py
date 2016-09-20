@@ -1,17 +1,11 @@
-"""
-kombu.utils.debug
-=================
-
-Debugging support.
-
-"""
-from __future__ import absolute_import
+"""Debugging support."""
+from __future__ import absolute_import, unicode_literals
 
 import logging
 
-from functools import wraps
+from vine.utils import wraps
 
-from kombu.five import items
+from kombu.five import items, python_2_unicode_compatible
 from kombu.log import get_logger
 
 __all__ = ['setup_logging', 'Logwrapped']
@@ -25,6 +19,7 @@ def setup_logging(loglevel=logging.DEBUG, loggers=['kombu.connection',
         l.setLevel(loglevel)
 
 
+@python_2_unicode_compatible
 class Logwrapped(object):
     __ignore = ('__enter__', '__exit__')
 

@@ -5,6 +5,8 @@ Example producer that sends a single message and exits.
 You can use `complete_receive.py` to receive the message sent.
 
 """
+from __future__ import absolute_import, unicode_literals
+
 from kombu import Connection, Producer, Exchange, Queue
 
 #: By default messages sent to exchanges are persistent (delivery_mode=2),
@@ -16,7 +18,7 @@ queue = Queue('kombu_demo', exchange, routing_key='kombu_demo')
 with Connection('amqp://guest:guest@localhost:5672//') as connection:
 
     #: Producers are used to publish messages.
-    #: a default exchange and routing key can also be specifed
+    #: a default exchange and routing key can also be specified
     #: as arguments the Producer, but we rather specify this explicitly
     #: at the publish call.
     producer = Producer(connection)

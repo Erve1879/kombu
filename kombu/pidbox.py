@@ -1,11 +1,5 @@
-"""
-kombu.pidbox
-===============
-
-Generic process mailbox.
-
-"""
-from __future__ import absolute_import
+"""Generic process mailbox."""
+from __future__ import absolute_import, unicode_literals
 
 import socket
 import warnings
@@ -23,8 +17,9 @@ from .common import maybe_declare, oid_from
 from .exceptions import InconsistencyError
 from .five import range
 from .log import get_logger
-from .utils import cached_property, uuid, reprcall
-from .utils.functional import maybe_evaluate
+from .utils.functional import maybe_evaluate, reprcall
+from .utils.objects import cached_property
+from .utils.uuid import uuid
 
 REPLY_QUEUE_EXPIRES = 10
 

@@ -1,19 +1,24 @@
-"""
-    kombu.utils.scheduling
-    ~~~~~~~~~~~~~~~~~~~~~~
-
-    Consumer utilities.
-
-"""
-from __future__ import absolute_import
+"""Consumer scheduling utilities."""
+from __future__ import absolute_import, unicode_literals
 
 from itertools import count
 
-from . import symbol_by_name
+from kombu.five import python_2_unicode_compatible
 
-__all__ = ['FairCycle', 'priority_cycle', 'round_robin_cycle', 'sorted_cycle']
+from .imports import symbol_by_name
+
+__all__ = [
+    'FairCycle', 'priority_cycle', 'round_robin_cycle', 'sorted_cycle',
+]
+
+CYCLE_ALIASES = {
+    'priority': 'kombu.utils.scheduling:priority_cycle',
+    'round_robin': 'kombu.utils.scheduling:round_robin_cycle',
+    'sorted': 'kombu.utils.scheduling:sorted_cycle',
+}
 
 
+@python_2_unicode_compatible
 class FairCycle(object):
     """Consume from a set of resources, where each resource gets
     an equal chance to be consumed from."""
@@ -35,15 +40,19 @@ class FairCycle(object):
                 if not self.resources:
                     raise self.predicate()
 
-    def get(self, **kwargs):
+    def get(self, callback, **kwargs):
+        succeeded = 0
         for tried in count(0):  # for infinity
             resource = self._next()
-
             try:
-                return self.fun(resource, **kwargs), resource
+                return self.fun(resource, callback, **kwargs)
             except self.predicate:
                 if tried >= len(self.resources) - 1:
-                    raise
+                    if not succeeded:
+                        raise
+                    break
+            else:
+                succeeded += 1
 
     def close(self):
         pass
@@ -71,6 +80,7 @@ class round_robin_cycle(object):
             items.append(items.pop(items.index(last_used)))
         except ValueError:
             pass
+        return last_used
 
 
 class priority_cycle(round_robin_cycle):
@@ -83,13 +93,6 @@ class sorted_cycle(priority_cycle):
 
     def consume(self, n):
         return sorted(self.items[:n])
-
-
-CYCLE_ALIASES = {
-    'priority': 'kombu.utils.scheduling:priority_cycle',
-    'round_robin': 'kombu.utils.scheduling:round_robin_cycle',
-    'sorted': 'kombu.utils.scheduling:sorted_cycle',
-}
 
 
 def cycle_by_name(name):

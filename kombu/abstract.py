@@ -1,17 +1,12 @@
-"""
-kombu.abstract
-==============
-
-Object utilities.
-
-"""
-from __future__ import absolute_import
+"""Object utilities."""
+from __future__ import absolute_import, unicode_literals
 
 from copy import copy
 
 from .connection import maybe_channel
 from .exceptions import NotBoundError
-from .utils import ChannelPromise
+from .five import python_2_unicode_compatible
+from .utils.functional import ChannelPromise
 
 __all__ = ['Object', 'MaybeChannelBound']
 
@@ -56,6 +51,7 @@ class Object(object):
         return self.__class__(**self.as_dict())
 
 
+@python_2_unicode_compatible
 class MaybeChannelBound(Object):
     """Mixin for classes that can be bound to an AMQP channel."""
     _channel = None
@@ -94,7 +90,10 @@ class MaybeChannelBound(Object):
         """Callback called when the class is bound."""
         pass
 
-    def __repr__(self, item=''):
+    def __repr__(self):
+        return self._repr_entity(type(self).__name__)
+
+    def _repr_entity(self, item=''):
         item = item or type(self).__name__
         if self.is_bound:
             return '<{0} bound to chan:{1}>'.format(

@@ -1,11 +1,5 @@
-"""
-kombu.transport.SLMQ
-====================
-
-SoftLayer Message Queue transport.
-
-"""
-from __future__ import absolute_import
+"""SoftLayer Message Queue transport."""
+from __future__ import absolute_import, unicode_literals
 
 import socket
 import string
@@ -13,9 +7,9 @@ import string
 import os
 
 from kombu.five import Empty, text_t
-from kombu.utils import cached_property  # , uuid
 from kombu.utils.encoding import bytes_to_str, safe_str
 from kombu.utils.json import loads, dumps
+from kombu.utils.objects import cached_property
 
 from . import virtual
 
@@ -78,7 +72,7 @@ class Channel(virtual.Channel):
             q = self._queue_cache[queue] = self.slmq.queue(queue)
             return q
 
-    def _delete(self, queue, *args):
+    def _delete(self, queue, *args, **kwargs):
         """delete queue by name."""
         queue_name = self.entity_name(queue)
         self._queue_cache.pop(queue_name, None)

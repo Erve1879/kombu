@@ -1,27 +1,57 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
+import random
 import sys
 import threading
 
 from collections import Iterable, Mapping, OrderedDict
-from functools import wraps
-from itertools import islice
+from itertools import count, repeat
+from time import sleep
 
-from kombu.five import UserDict, items, keys, string_t
+from vine.utils import wraps
 
-__all__ = ['LRUCache', 'memoize', 'lazy', 'maybe_evaluate',
-           'is_list', 'maybe_list', 'dictfilter']
+from kombu.five import (
+    UserDict, items, keys, python_2_unicode_compatible, string_t,
+)
+
+from .encoding import safe_repr as _safe_repr
+
+__all__ = [
+    'LRUCache', 'memoize', 'lazy', 'maybe_evaluate',
+    'is_list', 'maybe_list', 'dictfilter',
+]
+
 KEYWORD_MARK = object()
+
+
+@python_2_unicode_compatible
+class ChannelPromise(object):
+
+    def __init__(self, contract):
+        self.__contract__ = contract
+
+    def __call__(self):
+        try:
+            return self.__value__
+        except AttributeError:
+            value = self.__value__ = self.__contract__()
+            return value
+
+    def __repr__(self):
+        try:
+            return repr(self.__value__)
+        except AttributeError:
+            return '<promise: 0x{0:x}>'.format(id(self.__contract__))
 
 
 class LRUCache(UserDict):
     """LRU Cache implementation using a doubly linked list to track access.
 
-    :keyword limit: The maximum number of keys to keep in the cache.
-        When a new key is inserted and the limit has been exceeded,
-        the *Least Recently Used* key will be discarded from the
-        cache.
-
+    Arguments:
+        limit (int): The maximum number of keys to keep in the cache.
+            When a new key is inserted and the limit has been exceeded,
+            the *Least Recently Used* key will be discarded from the
+            cache.
     """
 
     def __init__(self, limit=None):
@@ -32,7 +62,7 @@ class LRUCache(UserDict):
     def __getitem__(self, key):
         with self.mutex:
             value = self[key] = self.data.pop(key)
-        return value
+            return value
 
     def update(self, *args, **kwargs):
         with self.mutex:
@@ -40,9 +70,12 @@ class LRUCache(UserDict):
             data.update(*args, **kwargs)
             if limit and len(data) > limit:
                 # pop additional items in case limit exceeded
-                # negative overflow will lead to an empty list
-                for item in islice(iter(data), len(data) - limit):
-                    data.pop(item)
+                for _ in range(len(data) - limit):
+                    data.popitem(last=False)
+
+    def popitem(self, last=True):
+        with self.mutex:
+            return self.data.popitem(last)
 
     def __setitem__(self, key, value):
         # remove least recently used key.
@@ -55,24 +88,28 @@ class LRUCache(UserDict):
         return iter(self.data)
 
     def _iterate_items(self):
-        for k in self:
-            try:
-                yield (k, self.data[k])
-            except KeyError:  # pragma: no cover
-                pass
+        with self.mutex:
+            for k in self:
+                try:
+                    yield (k, self.data[k])
+                except KeyError:  # pragma: no cover
+                    pass
     iteritems = _iterate_items
 
     def _iterate_values(self):
-        for k in self:
-            try:
-                yield self.data[k]
-            except KeyError:  # pragma: no cover
-                pass
+        with self.mutex:
+            for k in self:
+                try:
+                    yield self.data[k]
+                except KeyError:  # pragma: no cover
+                    pass
+
     itervalues = _iterate_values
 
     def _iterate_keys(self):
         # userdict.keys in py3k calls __getitem__
-        return keys(self.data)
+        with self.mutex:
+            return keys(self.data)
     iterkeys = _iterate_keys
 
     def incr(self, key, delta=1):
@@ -81,7 +118,7 @@ class LRUCache(UserDict):
             # integer as long as it exists and we can cast it
             newval = int(self.data.pop(key)) + delta
             self[key] = str(newval)
-        return newval
+            return newval
 
     def __getstate__(self):
         d = dict(vars(self))
@@ -108,7 +145,7 @@ class LRUCache(UserDict):
             return list(self._iterate_items())
 
 
-def memoize(maxsize=None, Cache=LRUCache):
+def memoize(maxsize=None, keyfun=None, Cache=LRUCache):
 
     def _memoize(fun):
         mutex = threading.Lock()
@@ -116,7 +153,10 @@ def memoize(maxsize=None, Cache=LRUCache):
 
         @wraps(fun)
         def _M(*args, **kwargs):
-            key = args + (KEYWORD_MARK,) + tuple(sorted(kwargs.items()))
+            if keyfun:
+                key = keyfun(args, kwargs)
+            else:
+                key = args + (KEYWORD_MARK,) + tuple(sorted(kwargs.items()))
             try:
                 with mutex:
                     value = cache[key]
@@ -142,6 +182,7 @@ def memoize(maxsize=None, Cache=LRUCache):
     return _memoize
 
 
+@python_2_unicode_compatible
 class lazy(object):
     """Holds lazy evaluation.
 
@@ -150,7 +191,6 @@ class lazy(object):
 
     Overloaded operations that will evaluate the promise:
         :meth:`__str__`, :meth:`__repr__`, :meth:`__cmp__`.
-
     """
 
     def __init__(self, fun, *args, **kwargs):
@@ -215,6 +255,104 @@ def dictfilter(d=None, **kw):
     d = kw if d is None else (dict(d, **kw) if kw else d)
     return {k: v for k, v in items(d) if v is not None}
 
+
+def shufflecycle(it):
+    it = list(it)  # don't modify callers list
+    shuffle = random.shuffle
+    for _ in repeat(None):
+        shuffle(it)
+        yield it[0]
+
+
+def fxrange(start=1.0, stop=None, step=1.0, repeatlast=False):
+    cur = start * 1.0
+    while 1:
+        if not stop or cur <= stop:
+            yield cur
+            cur += step
+        else:
+            if not repeatlast:
+                break
+            yield cur - step
+
+
+def fxrangemax(start=1.0, stop=None, step=1.0, max=100.0):
+    sum_, cur = 0, start * 1.0
+    while 1:
+        if sum_ >= max:
+            break
+        yield cur
+        if stop:
+            cur = min(cur + step, stop)
+        else:
+            cur += step
+        sum_ += cur
+
+
+def retry_over_time(fun, catch, args=[], kwargs={}, errback=None,
+                    max_retries=None, interval_start=2, interval_step=2,
+                    interval_max=30, callback=None):
+    """Retry the function over and over until max retries is exceeded.
+
+    For each retry we sleep a for a while before we try again, this interval
+    is increased for every retry until the max seconds is reached.
+
+    Arguments:
+        fun (Callable): The function to try
+        catch (Tuple[BaseException]): Exceptions to catch, can be either
+            tuple or a single exception class.
+
+    Keyword Arguments:
+        args (Tuple): Positional arguments passed on to the function.
+        kwargs (Dict): Keyword arguments passed on to the function.
+        errback (Callable): Callback for when an exception in ``catch``
+            is raised.  The callback must take three arguments:
+            ``exc``, ``interval_range`` and ``retries``, where ``exc``
+            is the exception instance, ``interval_range`` is an iterator
+            which return the time in seconds to sleep next, and ``retries``
+            is the number of previous retries.
+        max_retries (int): Maximum number of retries before we give up.
+            If this is not set, we will retry forever.
+        interval_start (float): How long (in seconds) we start sleeping
+            between retries.
+        interval_step (float): By how much the interval is increased for
+            each retry.
+        interval_max (float): Maximum number of seconds to sleep
+            between retries.
+    """
+    retries = 0
+    interval_range = fxrange(interval_start,
+                             interval_max + interval_start,
+                             interval_step, repeatlast=True)
+    for retries in count():
+        try:
+            return fun(*args, **kwargs)
+        except catch as exc:
+            if max_retries and retries >= max_retries:
+                raise
+            if callback:
+                callback()
+            tts = float(errback(exc, interval_range, retries) if errback
+                        else next(interval_range))
+            if tts:
+                for _ in range(int(tts)):
+                    if callback:
+                        callback()
+                    sleep(1.0)
+                # sleep remainder after int truncation above.
+                sleep(abs(int(tts) - tts))
+
+
+def reprkwargs(kwargs, sep=', ', fmt='{0}={1}'):
+    return sep.join(fmt.format(k, _safe_repr(v)) for k, v in items(kwargs))
+
+
+def reprcall(name, args=(), kwargs={}, sep=', '):
+    return '{0}({1}{2}{3})'.format(
+        name, sep.join(map(_safe_repr, args or ())),
+        (args and kwargs) and sep or '',
+        reprkwargs(kwargs, sep),
+    )
 
 # Compat names (before kombu 3.0)
 promise = lazy
