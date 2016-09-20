@@ -943,7 +943,7 @@ class Transport(base.Transport):
                 else:
                     channel.close()
 
-    def drain_events(self, connection, timeout=None):
+    def drain_events(self, connection, timeout=None, callback=None):
         time_start = monotonic()
         get = self.cycle.get
         polling_interval = self.polling_interval
